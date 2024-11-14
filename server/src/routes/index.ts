@@ -1,0 +1,13 @@
+import { Router } from "express";
+
+// import baccaratRouter from "./baccarat";
+import authRouter from './auth';
+
+
+const router = Router();
+
+
+router.use("/auth", authRouter);
+
+
+export default router;

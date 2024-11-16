@@ -1,144 +1,63 @@
 import { getKeyValue, Pagination, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip } from '@nextui-org/react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import RenderDate from '../utils';
 import moment from 'moment';
+import { useSocket } from '../utils/use-socket';
+import { getService, postService } from '../utils/request';
+import RenderLongString from './RenderLongString';
+
+interface Log {
+  name: string;
+  amount: string;
+  from: string;
+  to: string;
+  hash: string;
+  time: string;
+}
+
 
 const Logs = () => {
-  const [data, setData] = useState([
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589731
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589732
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589733
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589734
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589735
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589736
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731089589737
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1701589589738
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1531589589739
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589740
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589741
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589742
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589743
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589444
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589745
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589746
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589747
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589748
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589749
-    },
-    {
-      from: 'asdfasdfaasdfasdf',
-      to: 'asdfasdfa;sldfklksdlfka',
-      amount: 0.0121551,
-      time: 1731589589750
-    },
-  ]);
+
+  const { socket } = useSocket();
+
+  const handleTransaction = (res: Log) => {
+    data.unshift(res);
+    data.pop();
+    setData([...data]);
+  };
+
+  useEffect(() => {
+
+    if (socket) {
+      socket.on('new_transaction', handleTransaction);
+      return () => {
+        socket.off('new_transaction');
+      };
+    }
+  }, [socket]);
+
+  const [data, setData] = useState<Log[]>([]);
+
 
 
   const [page, setPage] = React.useState(1);
   const rowsPerPage = 10;
 
-  const [pages, setPages] = useState(10);
+  const [pages, setPages] = useState(1);
 
-  const items = React.useMemo(() => {
+  useEffect(() => {
     const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
+    const end = start + rowsPerPage - 1;
+    console.log({ start, end });
 
-    return data.slice(start, end);
-  }, [page, data]);
+    postService('/logs', { start, end }).then(({ data }) => {
+      console.log(data);
+      setData(data.data);
+      setPages(Math.ceil(data.total / rowsPerPage));
+    });
+
+
+  }, [page]);
 
 
   return (
@@ -166,19 +85,23 @@ const Logs = () => {
           wrapper: "min-h-[222px]",
         }}>
         <TableHeader>
+          <TableColumn key='hash' >Hash</TableColumn>
           <TableColumn key='from' >From</TableColumn>
           <TableColumn key='to'  >To</TableColumn>
-          <TableColumn key='amount'  >Amount</TableColumn>
+          <TableColumn key='name' >Name</TableColumn>
+          <TableColumn key='amount' >Amount</TableColumn>
           <TableColumn key='time' >Age</TableColumn>
         </TableHeader>
-        <TableBody items={items} >
+        <TableBody items={data} >
           {(item) => (
             <TableRow key={item.time}>
               {(columnKey) => <TableCell> {columnKey === 'time' ?
                 <Tooltip showArrow={true} color='secondary' content={RenderDate(getKeyValue(item, columnKey))}>
                   {moment(getKeyValue(item, columnKey)).fromNow()}
-                </Tooltip> :
-                getKeyValue(item, columnKey)}</TableCell>}
+                </Tooltip> : <RenderLongString link={columnKey === 'hash' ? 'https://bscscan.com/tx/' : ''}  >
+                  {getKeyValue(item, columnKey)}
+                </RenderLongString>
+              }</TableCell>}
             </TableRow>
           )}
         </TableBody>

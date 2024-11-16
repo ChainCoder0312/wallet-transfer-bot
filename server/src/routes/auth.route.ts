@@ -1,5 +1,5 @@
 import { RequestHandler, Router } from 'express';
-import { changePassowrd, login, logout } from '../controllers/auth';
+import { changePassowrd, login, logout } from '../controllers/auth.crtl';
 import { authenticate } from '../middleware/auth'; // Ensure authenticate is typed correctly
 
 const authRouter = Router();

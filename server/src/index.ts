@@ -2,22 +2,20 @@ import "dotenv/config";
 import * as express from "express";
 import routers from "./routes";
 import * as cors from "cors";
-// import { initServer } from "./controllers/crash";
-// import { initSlider } from "./controllers/slide";
-// import { initHilo } from "./controllers/hilo_m";
-// import { initBaccarat } from "./controllers/baccarat";
-
-// const ioGames = [initServer, initSlider, initBaccarat, initHilo];
-
 import * as compression from "compression";
+import { Server } from "socket.io";
+import { Bot } from './bot/bot';
 const config = require("../config");
 
 const { PORT } = config;
 const app = express();
+const bot = new Bot();
 
 app.use(express.json());
 app.use(compression());
 app.use(express.static(`${config.DIR}/public`));
+
+
 
 app.use(
   cors({
@@ -28,11 +26,21 @@ app.use(
 );
 
 // Routes
-app.use("/api", routers);
+app.use("/api", routers(bot));
 
 const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 const io = require("socket.io")(server, { cors: { origin: "*" } });
 
-// ioGames.forEach((g) => g(io));
+
+io.on('connection', (socket: Server) => {
+  bot.onServer(socket);
+  console.log('Socket connected');
+  socket.on('disconnect', () => {
+    bot.onServer(null);
+    console.log('Socket disconnected');
+  });
+});
+
+

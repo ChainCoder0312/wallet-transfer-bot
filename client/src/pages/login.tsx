@@ -2,13 +2,13 @@ import { Button, Input } from "@nextui-org/react";
 import { KeyboardEvent, useState } from "react";
 import { IoKeyOutline } from "react-icons/io5";
 import { postService } from "../utils/request";
-import { useAuth } from "../utils/use-auth";
+import { useStore } from "../utils/use-store";
 import { saveSession } from "../utils/session";
 import toast from "react-hot-toast";
 
 const Login = () => {
   const [password, setPassword] = useState('');
-  const { setIsLoggedIn } = useAuth();
+  const { setIsLoggedIn } = useStore();
   const handleLogin = async () => {
     try {
       if (!password) return;

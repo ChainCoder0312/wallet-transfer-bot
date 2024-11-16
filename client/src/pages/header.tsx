@@ -4,14 +4,14 @@ import { useState } from "react";
 import { BsKey, BsLock, BsUnlock } from "react-icons/bs";
 import { MdLock, MdLogout } from "react-icons/md";
 import * as Yup from 'yup';
-import { useAuth } from "../utils/use-auth";
+import { useStore } from "../utils/use-store";
 import { postService } from "../utils/request";
 import { deleteSession } from "../utils/session";
 import toast from "react-hot-toast";
 
 const Header = () => {
   const [passModal, setPassModal] = useState(false);
-  const { setIsLoggedIn } = useAuth();
+  const { setIsLoggedIn } = useStore();
 
   const handleLogout = async () => {
     const { data } = await postService('/auth/logout', {});
@@ -86,7 +86,7 @@ const Header = () => {
                     variant="bordered"
                     {...getFieldProps('currentPassword')}
                   />
-                  {formik.touched.currentPassword && formik.errors.currentPassword ? (
+                  {touched.currentPassword && errors.currentPassword ? (
                     <div className="text-red-500 text-sm px-2">{formik.errors.currentPassword}</div>
                   ) : null}
                   <Input
@@ -100,8 +100,8 @@ const Header = () => {
                     variant="bordered"
                     {...getFieldProps('newPassword')}
                   />
-                  {formik.touched.newPassword && formik.errors.newPassword ? (
-                    <div className="text-red-500 text-sm px-2">{formik.errors.newPassword}</div>
+                  {touched.newPassword && errors.newPassword ? (
+                    <div className="text-red-500 text-sm px-2">{errors.newPassword}</div>
                   ) : null}
                   <Input
                     endContent={

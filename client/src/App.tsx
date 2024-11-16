@@ -2,11 +2,11 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import './App.css';
 import Login from './pages/login';
 import Main from './pages/main';
-import { useAuth } from './utils/use-auth';
+import { useStore } from './utils/use-store';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn } = useStore();
   return (
     <Router>
       <div>

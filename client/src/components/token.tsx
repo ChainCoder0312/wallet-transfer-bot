@@ -1,33 +1,64 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Button, Input, Image, ModalContent } from "@nextui-org/react";
-import { Formik, Form, Field } from 'formik';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { TiPlusOutline } from 'react-icons/ti';
 import { postService } from '../utils/request';
 import toast from 'react-hot-toast';
+import { useStore } from '../utils/use-store';
+import { useEther } from '../utils/use-ether';
 
 const TokenSchema = Yup.object().shape({
   name: Yup.string().required('Token name is required'),
   contract: Yup.string().required('Contract address is required'),
   icon: Yup.string().url('Must be a valid URL').nullable(),
+  decimal: Yup.number().nullable(),
+  symbol: Yup.string().required('Token symbol is required')
 });
 
 interface TokenFormValues {
   name: string;
   contract: string;
   icon: string;
+  decimal: number;
+  symbol: string;
 }
 
 export default function AddTokenModal() {
+  const { getContractInfo } = useEther();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+
+  const { setTokens, tokens } = useStore();
 
   const initialValues: TokenFormValues = {
     name: '',
     contract: '',
     icon: '',
+    decimal: 0,
+    symbol: ''
   };
+  const formik = useFormik({
+    initialValues,
+    validationSchema: TokenSchema,
+    onSubmit: async (values: TokenFormValues, { resetForm }: { resetForm: () => void; }) => {
+      try {
+        setIsSending(true);
+        const { data } = await postService('/token/add', values);
+        setTokens([...tokens, values]);
+        toast.success(data.message);
+        resetForm();
+        setPreviewUrl('');
+        handleClose();
+        setIsSending(false);
+      } catch (err) {
+        setIsSending(false);
+      }
+    },
+  });
+
 
   const handleOpen = () => setIsOpen(true);
   const handleClose = () => {
@@ -35,25 +66,24 @@ export default function AddTokenModal() {
     setPreviewUrl('');
   };
 
-  const handleSubmit = async (values: TokenFormValues, { resetForm }: { resetForm: () => void; }) => {
-    try {
-      setIsSending(true);
-      const { data } = await postService('/token/add', values);
-      toast.success(data.message);
-      resetForm();
-      setPreviewUrl('');
-      handleClose();
-      setIsSending(false);
-    } catch (err) {
-      setIsSending(false);
-    }
+  const { getFieldProps, handleSubmit, errors, touched, values, setFieldValue } = formik;
 
-  };
+  useEffect(() => {
+
+    getContractInfo(values.contract).then(res => {
+
+      setFieldValue('name', res?.name || '');
+      setFieldValue('decimal', res?.decimal || '');
+      setFieldValue('symbol', res?.symbol || "");
+
+    }).catch(err => console.log(err));
+  }, [values.contract]);
+
 
   return (
     <>
       <Button onClick={handleOpen} size='sm' color='secondary' className=' float-end '>
-        <TiPlusOutline /> Add Token
+        <TiPlusOutline /> Import Token
       </Button>
 
       <Modal
@@ -63,100 +93,118 @@ export default function AddTokenModal() {
       >
         <ModalContent>
 
-          <Formik
-            initialValues={initialValues}
-            validationSchema={TokenSchema}
+          <form
             onSubmit={handleSubmit}
           >
-            {({ errors, touched, setFieldValue, values }) => (
-              <Form className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Token</h2>
+            <div className=' flex items-baseline' >
 
-                <div>
-                  <Field name="name">
-                    {({ field }: { field: any; }) => (
-                      <Input
-                        {...field}
-                        autoFocus
-                        label="Token Name"
-                        placeholder="Enter token name"
-                        className="w-full"
-                        errorMessage={touched.name && errors.name}
-                        variant='bordered'
-                      />
-                    )}
-                  </Field>
-                  <div className='text-sm text-red-400 px-2'>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Import Token</h2>&nbsp;&nbsp;&nbsp;
+              <h6>(Binance Smart Chain)</h6>
+            </div>
+            <br />
+            <div>
+              <Input
+                autoFocus
+                {...getFieldProps('contract')}
+                label="Contract Address"
+                placeholder="Enter contract address"
+                className="w-full"
+                variant='bordered'
 
-                    {touched.name && errors.name}
-                  </div>
-                </div>
+              />
+              <div className='text-sm text-red-400 px-2 h-8'>
 
-                <div>
-                  <Field name="contract">
-                    {({ field }: { field: any; }) => (
-                      <Input
-                        {...field}
-                        label="Contract Address"
-                        placeholder="Enter contract address"
-                        className="w-full"
-                        variant='bordered'
+                {touched.contract && errors.contract}
+              </div>
+            </div>
 
-                      />
-                    )}
-                  </Field>
-                  <div className='text-sm text-red-400 px-2'>
+            <div>
+              <Input
+                {...getFieldProps('name')}
 
-                    {touched.contract && errors.contract}
-                  </div>
-                </div>
+                label="Token Name"
+                placeholder="Enter token name"
+                className="w-full"
+                variant='bordered'
 
-                <div>
-                  <Field name="icon">
-                    {({ field }: { field: any; }) => (
-                      <Input
-                        {...field}
-                        label="Icon URL"
-                        placeholder="Enter icon URL"
-                        className="w-full"
-                        variant='bordered'
+              />
+              <div className='text-sm text-red-400 px-2 h-8'>
+                {touched.name && errors.name}
+              </div>
+            </div>
 
-                        onChange={(e) => {
-                          setFieldValue('icon', e.target.value);
-                          setPreviewUrl(e.target.value);
-                        }}
-                      />
-                    )}
-                  </Field>
-                  <div className='text-sm text-red-400 px-2'>
+            <div>
+              <Input
+                {...getFieldProps('symbol')}
+                // isDisabled
+                onChange={() => { }}
 
-                    {touched.icon && errors.icon}
-                  </div>
-                </div>
+                label="Token Symbol"
+                placeholder="Enter token symbol"
+                className="w-full"
+                variant='bordered'
+              />
+              <div className='text-sm text-red-400 px-2 h-8'>
+                {touched.symbol && errors.symbol}
+              </div>
+            </div>
 
-                {values.icon && (
-                  <div className="flex items-center justify-center space-x-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Icon Preview:</p>
-                    <Image
-                      src={previewUrl}
-                      alt="Token Icon Preview"
-                      className="w-12 h-12 object-contain bg-gray-100 dark:bg-gray-700 rounded-full"
-                    /* fallback={<div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500">No Image</div>} */
-                    />
-                  </div>
-                )}
 
-                <div className="flex justify-end space-x-4">
-                  <Button color="danger" variant="flat" onClick={handleClose}>
-                    Cancel
-                  </Button>
-                  <Button isLoading={isSending} type="submit" color="primary">
-                    Add Token
-                  </Button>
-                </div>
-              </Form>
+            <div>
+              <Input
+                {...getFieldProps('decimal')}
+                label="Decimal"
+                onChange={() => { }}
+
+                placeholder="Enter token decimal"
+                className="w-full"
+                variant='bordered'
+              />
+              <div className='text-sm text-red-400 px-2 h-8'>
+                {touched.decimal && errors.decimal}
+              </div>
+            </div>
+
+            <div>
+              <Input
+                {...getFieldProps('icon')}
+                label="Icon URL"
+                placeholder="Enter icon URL"
+                className="w-full"
+                variant='bordered'
+
+                onChange={(e) => {
+                  getFieldProps('icon').onChange(e);
+                  setPreviewUrl(e.target.value);
+                }}
+              />
+              <div className='text-sm text-red-400 px-2 h-8'>
+
+                {touched.icon && errors.icon}
+              </div>
+            </div>
+
+            {values.icon && (
+              <div className="flex items-center justify-center space-x-4 mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Icon Preview:</p>
+                <Image
+                  src={previewUrl}
+                  alt="Token Icon Preview"
+                  className="w-12 h-12 object-contain bg-gray-100 dark:bg-gray-700 rounded-full"
+
+                />
+              </div>
             )}
-          </Formik>
+
+            <div className="flex justify-end space-x-4">
+              <Button color="danger" variant="flat" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button isDisabled={!values.name} isLoading={isSending} type="submit" color="primary">
+                Import
+              </Button>
+            </div>
+          </form>
         </ModalContent>
       </Modal>
     </>

@@ -14,7 +14,7 @@ export const login = async (req: Request, res: Response) => {
   if (isMatch) {
     const token = jwt.sign({ loggedIn: true }, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1h' });
 
-    res.json({ message: 'Login successful', token });
+    res.json({ message: 'Login successfully', token });
   } else {
     res.status(401).json({ message: 'Invalid password' });
   }

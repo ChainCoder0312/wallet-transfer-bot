@@ -1,0 +1,24 @@
+[
+  {
+    "name": "BNB",
+    "contract": "",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png",
+    "decimal": 18,
+    "symbol": "BNB",
+    "isNative": true
+  },
+  {
+    "name": "MyTestToken",
+    "contract": "0x72E0E7a0CDCAbA7a861a4031903d8eEDd607E384",
+    "icon": "",
+    "decimal": 18,
+    "symbol": "MTT"
+  },
+  {
+    "name": "MyGSFToken",
+    "contract": "0x70851eDF3d41e59565035D71E5a73b9D670A5B20",
+    "icon": "",
+    "decimal": 18,
+    "symbol": "GSF"
+  }
+]

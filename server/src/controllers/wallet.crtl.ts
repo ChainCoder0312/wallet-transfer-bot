@@ -3,13 +3,11 @@ import { readData, writeData } from '../utils/file_manage';
 import { decrypt, encrypt } from '../utils/hash';
 import { verifyPassword } from '../utils/auth';
 import { Bot } from '../bot/bot';
-
 interface Wallet {
   privateKey: string;
   publicKey: string;
 }
 
-const seret_key = 'your_secret_key';
 
 export const getPrivateKey = async (req: Request, res: Response) => {
   try {
@@ -20,7 +18,7 @@ export const getPrivateKey = async (req: Request, res: Response) => {
     const walletData = await readData('wallets');
     if (!walletData) return res.json('');
 
-    const datastr = decrypt(walletData.encryptedData, seret_key, walletData.iv);
+    const datastr = decrypt(walletData.encryptedData, walletData.iv);
     let wallets: Wallet[] = JSON.parse(datastr);
     res.json(wallets[num - 1]?.privateKey || '');
 
@@ -34,7 +32,7 @@ export const fetch = async (req: Request, res: Response) => {
     const walletData = await readData('wallets');
     if (!walletData) return res.json([]);
 
-    const datastr = decrypt(walletData.encryptedData, seret_key, walletData.iv);
+    const datastr = decrypt(walletData.encryptedData, walletData.iv);
     const wallets: Wallet[] = JSON.parse(datastr);
     const resData = [
       {
@@ -66,11 +64,11 @@ export const saveData = (bot: Bot) => async (req: Request, res: Response) => {
 
     if (!walletData) {
       const initialData = num === 1 ? [wallet] : [undefined, wallet];
-      const encryptedData = encrypt(JSON.stringify(initialData), seret_key);
+      const encryptedData = encrypt(JSON.stringify(initialData));
       await writeData("wallets", encryptedData);
 
     } else {
-      const datastr = decrypt(walletData.encryptedData, seret_key, walletData.iv);
+      const datastr = decrypt(walletData.encryptedData, walletData.iv);
       let wallets = JSON.parse(datastr);
 
       // Initialize wallets array if undefined or empty
@@ -85,7 +83,7 @@ export const saveData = (bot: Bot) => async (req: Request, res: Response) => {
         wallets[num - 1] = wallet;
       }
 
-      const encryptedData = encrypt(JSON.stringify(wallets), seret_key);
+      const encryptedData = encrypt(JSON.stringify(wallets));
       await writeData("wallets", encryptedData);
     }
     if (num === 2) bot.updatePublicKey(wallet.publicKey);

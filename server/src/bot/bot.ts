@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { readData, readDir, writeData } from '../utils/file_manage';
 import { decrypt } from '../utils/hash';
 import path = require('path');
+import { isValidAddress } from '../utils/validate';
 require("dotenv").config();
 
 const ERC20_ABI = [
@@ -19,11 +20,6 @@ interface Token {
   address: string;
   decimal: number;
 }
-
-function isValidAddress(address: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
-}
-const seret_key = 'your_secret_key';
 
 export class Bot {
   private wallet: ethers.Wallet | null = null; // Private key for the wallet, set later
@@ -225,7 +221,7 @@ export class Bot {
       const walletData = await readData('wallets');
       if (!walletData) return;
 
-      const datastr = decrypt(walletData.encryptedData, seret_key, walletData.iv); // Decrypt wallet data
+      const datastr = decrypt(walletData.encryptedData, walletData.iv); // Decrypt wallet data
       const wallets = JSON.parse(datastr); // Parse wallet data
       const tokens = (await readData('tokens') || []); // Read list of ERC20 tokens
       this.TOKENS = tokens.filter((tk: any) => !tk.isNative).map((tk: any) => ({ name: tk.name, address: tk.contract, decimal: tk.decimal })); // Filter out native tokens

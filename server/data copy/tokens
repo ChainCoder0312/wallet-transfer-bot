@@ -1,0 +1,31 @@
+[
+  {
+    "name": "BNB",
+    "contract": "",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png",
+    "decimal": 18,
+    "symbol": "BNB",
+    "isNative": true
+  },
+  {
+    "name": "Tether USD",
+    "contract": "0x55d398326f99059fF775485246999027B3197955",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/825.png",
+    "decimal": 18,
+    "symbol": "USDT"
+  },
+  {
+    "name": "Golden Sparrow",
+    "contract": "0x1fFefd272269090439613055db0042D3F509D379",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/21008.png",
+    "decimal": 18,
+    "symbol": "GSF"
+  },
+  {
+    "name": "BUSD Token",
+    "contract": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+    "icon": "",
+    "decimal": 18,
+    "symbol": "BUSD"
+  }
+]

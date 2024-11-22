@@ -10,6 +10,6 @@ export default (bot: Bot) => {
   const tokenRouter = Router();
 
   tokenRouter.post('/add', authenticate, add(bot) as RequestHandler);
-  tokenRouter.get('/fetch', authenticate, fetch as RequestHandler);
+  tokenRouter.get('/fetch', fetch as RequestHandler);
   return tokenRouter;
 };

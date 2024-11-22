@@ -10,8 +10,7 @@ function App() {
   return (
     <Router>
       <div>
-        {/* <button onClick={login}>Login</button>
-        <button onClick={logout}>Logout</button> */}
+
 
         <Routes>
           {/* Public Route */}

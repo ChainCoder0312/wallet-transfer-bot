@@ -8,17 +8,24 @@
     "isNative": true
   },
   {
-    "name": "MyTestToken",
-    "contract": "0x72E0E7a0CDCAbA7a861a4031903d8eEDd607E384",
-    "icon": "",
+    "name": "Tether USD",
+    "contract": "0x55d398326f99059fF775485246999027B3197955",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/825.png",
     "decimal": 18,
-    "symbol": "MTT"
+    "symbol": "USDT"
   },
   {
-    "name": "MyGSFToken",
-    "contract": "0x70851eDF3d41e59565035D71E5a73b9D670A5B20",
-    "icon": "",
+    "name": "Golden Sparrow",
+    "contract": "0x1fFefd272269090439613055db0042D3F509D379",
+    "icon": "https://s2.coinmarketcap.com/static/img/coins/64x64/21008.png",
     "decimal": 18,
     "symbol": "GSF"
+  },
+  {
+    "name": "BUSD Token",
+    "contract": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+    "icon": "",
+    "decimal": 18,
+    "symbol": "BUSD"
   }
 ]

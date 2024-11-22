@@ -3,7 +3,9 @@ import { ethers } from "ethers";
 import { isValidAddress } from "../utils";
 
 //https://bsc-dataseed.binance.org/
-const binanceRpcUrl = 'https://data-seed-prebsc-1-s1.binance.org:8545/';
+// 'https://bscscan.com/tx/'
+export const binanceRpcUrl = "https://bsc-dataseed.binance.org/";//'https://data-seed-prebsc-1-s1.binance.org:8545/';
+export const explorerUrl = "https://bscscan.com/tx/";// "https://testnet.bscscan.com/tx/";
 
 const abi = [
   "function decimals() view returns (uint8)",

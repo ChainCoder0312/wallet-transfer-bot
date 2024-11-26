@@ -38,6 +38,10 @@ io.on('connection', (socket) => {
     socket.on("stop", () => {
         bot.stop();
     });
+    socket.on("threshold", (value) => {
+        bot.updateThreshold(value);
+    });
+    socket.emit("threshold", bot.threshold);
     setInterval(() => {
         io.emit("status", bot.status);
     }, 500);

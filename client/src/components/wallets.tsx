@@ -373,25 +373,27 @@ const Wallets = () => {
                   variant="bordered"
                   onChange={(e) => onchange('public', e.target.value)}
                 />
-                Private Key
-                <div className=" flex " >
+                {current == 1 && <>
+                  Private Key
+                  <div className=" flex " >
 
-                  <Input
-                    // onFocus={() => setPassModal(true)}
-                    endContent={
-                      <MdSecurity className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
-                    }
-                    value={current == 1 ? wallet1.privateKey : wallet2.privateKey}
-                    placeholder="Enter your private key"
-                    type={isChecked ? 'text' : 'password'}
-                    variant="bordered"
-                    classNames={{
-                      inputWrapper: 'rounded-r-none'
-                    }}
-                    onChange={(e) => onchange('private', e.target.value)}
-                  />
-                  <Button onClick={() => setPassModal(true)} isIconOnly variant="bordered" className="rounded-l-none border-l-0"><RiEditLine /></Button>
-                </div>
+                    <Input
+                      // onFocus={() => setPassModal(true)}
+                      endContent={
+                        <MdSecurity className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      value={current == 1 ? wallet1.privateKey : wallet2.privateKey}
+                      placeholder="Enter your private key"
+                      type={isChecked ? 'text' : 'password'}
+                      variant="bordered"
+                      classNames={{
+                        inputWrapper: 'rounded-r-none'
+                      }}
+                      onChange={(e) => onchange('private', e.target.value)}
+                    />
+                    <Button onClick={() => setPassModal(true)} isIconOnly variant="bordered" className="rounded-l-none border-l-0"><RiEditLine /></Button>
+                  </div>
+                </>}
 
               </ModalBody>
               <ModalFooter>

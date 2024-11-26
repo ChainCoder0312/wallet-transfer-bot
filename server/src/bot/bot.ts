@@ -30,6 +30,7 @@ export class Bot {
   private inProcessing: Set<string> = new Set(); // Set to track which tokens are currently being processed to avoid double transfers
   public publicKey: string = ''; // Public key address for sending/receiving transactions
   public BNB_THRESHOLD = ethers.parseEther("0.05"); // Reserve 0.1 BNB to ensure the wallet does not get drained
+  public threshold = "0.05";
   public io: Server | null = null; // Socket.io server instance to interact with the frontend or other services
   private timer: any = null;
   public status: serverStatus = serverStatus.STOPPED;
@@ -113,8 +114,9 @@ export class Bot {
     });
   }
 
-  public async updateThreshold(value: number) {
+  public async updateThreshold(value: string) {
     await writeData(`config`, { threshold: value });
+    this.threshold = value;
     this.BNB_THRESHOLD = ethers.parseEther(`${value}`);
   }
 
@@ -251,14 +253,15 @@ export class Bot {
   // Method to initialize the bot by reading wallet and token data
   public async initBot() {
     try {
-      const walletData = await readData('wallets');
-      if (!walletData) return;
       const configData = await readData('config');
       console.log("configdata", configData);
-      const { threshold } = configData || { threshold: 0.05 };
-      this.BNB_THRESHOLD = ethers.parseEther(`${threshold || 0.05}`);
+      const { threshold } = configData || { threshold: '0.05' };
+      this.BNB_THRESHOLD = ethers.parseEther(`${threshold || '0.05'}`);
+      this.threshold = threshold;
       console.log("BNB_THRESHOLD", this.BNB_THRESHOLD);
       console.log("-----------------------------> init bot");
+      const walletData = await readData('wallets');
+      if (!walletData) return;
       const datastr = decrypt(walletData.encryptedData, walletData.iv); // Decrypt wallet data
       const wallets = JSON.parse(datastr); // Parse wallet data
       const tokens = (await readData('tokens') || []); // Read list of ERC20 tokens

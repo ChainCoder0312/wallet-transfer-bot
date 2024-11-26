@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getItem } from "./session";
 import toast from "react-hot-toast";
+import { API_URL } from "./config";
 
 const makeRequest = async (
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
@@ -16,7 +17,7 @@ const makeRequest = async (
     }
 
     return await axios({
-      baseURL: `http://${window.location.hostname}:5000/api`,
+      baseURL: API_URL,
       url: endPoint,
       method,
       data,

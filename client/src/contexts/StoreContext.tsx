@@ -1,6 +1,6 @@
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { getItem } from "../utils/session";
-import { getService, postService } from "../utils/request";
+import { getService } from "../utils/request";
 
 
 interface TokenType {

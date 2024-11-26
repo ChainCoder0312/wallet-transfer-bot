@@ -1,4 +1,4 @@
-import React, { ReactNode, createContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { isValidAddress } from "../utils";
 

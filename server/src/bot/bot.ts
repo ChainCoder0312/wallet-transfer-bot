@@ -18,7 +18,10 @@ interface Token {
   name: string;
   address: string;
   decimal: number;
+  contract?: ethers.Contract;
 }
+
+enum serverStatus { RUNNING, STOPPED };
 
 export class Bot {
   private wallet: ethers.Wallet | null = null; // Private key for the wallet, set later
@@ -28,7 +31,8 @@ export class Bot {
   public publicKey: string = ''; // Public key address for sending/receiving transactions
   public BNB_THRESHOLD = ethers.parseEther("0.05"); // Reserve 0.1 BNB to ensure the wallet does not get drained
   public io: Server | null = null; // Socket.io server instance to interact with the frontend or other services
-
+  private timer: any = null;
+  public status: serverStatus = serverStatus.STOPPED;
   // Method to add tasks to a queue to avoid multiple tasks running concurrently
   private async addToQueue(task: () => Promise<void>) {
     if (this.isQueueRunning) return; // Skip if a task is already running
@@ -39,6 +43,18 @@ export class Bot {
       this.isQueueRunning = false; // Reset flag once task is completed
     }
   }
+  private handleTransfer = async (from: any, to: any, value: any, token: Token) => {
+    try {
+      if (!this.wallet) return; // Ensure wallet is available
+      if (to.toLowerCase() === this.wallet.address.toLowerCase()) { // If the token was sent to the bot's wallet
+        if (this.io) this.io.emit('update_balance');
+        console.log(`Detected deposit of ${ethers.formatUnits(value, 18)} ${token.name}.`);
+        await this.addToQueue(() => this.transferTokens(token.address, token.name, token.decimal)); // Transfer tokens to public address
+      }
+    } catch (error) {
+      console.error(`Error in ${token.name} deposit monitoring:`, error);
+    }
+  };
 
   // Retry logic for handling tasks that might fail (with retries and a delay between attempts)
   private async retry(task: () => Promise<void>, retries = 3, delay = 3000) {
@@ -56,30 +72,41 @@ export class Bot {
 
   // Method to transfer tokens to the public key address (could be ERC20 tokens)
   private async transferTokens(tokenAddress: string, tokenName: string, decimals: number) {
+    if (this.status === serverStatus.STOPPED) return;
     await this.retry(async () => {
-      if (this.inProcessing.has(tokenAddress)) return; // Skip if already processing this token
+      if (this.inProcessing.has(tokenAddress)) {
+        console.log("this wall inprocessing");
+        return;
+      }; // Skip if already processing this token
 
       this.inProcessing.add(tokenAddress); // Add token address to the processing set
       try {
         if (!this.wallet || this.wallet.address === this.publicKey || !isValidAddress(this.publicKey)) {
+          console.log("incorrect wallet");
           this.inProcessing.delete(tokenAddress);
           return;
         } // Ensure wallet is available before proceeding
+        const walletAddress = this.wallet.address;
         const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.wallet); // Initialize contract
         const balance = await tokenContract.balanceOf(this.wallet.address); // Get token balance
+
 
         if (balance > 0) { // If balance is greater than 0, attempt to transfer tokens
           console.log(`Transferring ${ethers.formatUnits(balance, decimals)} ${tokenName}...`);
           const tx = await tokenContract.transfer(this.publicKey, balance); // Transfer tokens to public key
           console.log(`Transaction sent: ${tx.hash}`);
-          await tx.wait(); // Wait for the transaction to be confirmed
-          console.log(`${tokenName} transferred successfully in transaction: ${tx.hash}`);
-          this.saveLog(this.wallet.address, this.publicKey, ethers.formatUnits(balance, decimals), tx.hash, tokenName);
+          const delay = async () => {
+            await tx.wait(); // Wait for the transaction to be confirmed
+            console.log(`${tokenName} transferred successfully in transaction: ${tx.hash}`);
+            this.saveLog(walletAddress, this.publicKey, ethers.formatUnits(balance, decimals), tx.hash, tokenName);
+            if (this.io) this.io.emit('update_balance');
+          }
+          setTimeout(() => delay(), 1000);
         } else {
           console.log(`No ${tokenName} balance to transfer.`);
         }
       } catch (error) {
-        console.error(`Error during ${tokenName} transfer:`, error);
+        console.error(`Error during ${tokenName} transfer:  insufficient gas fee `);
       } finally {
         this.inProcessing.delete(tokenAddress); // Ensure we always clear the processing state for this token
       }
@@ -95,8 +122,13 @@ export class Bot {
   private async transferBNB() {
     try {
       if (!this.wallet || this.wallet.address === this.publicKey || !isValidAddress(this.publicKey)) return; // Ensure wallet is available
-      const balance = await provider.getBalance(this.wallet.address); // Get current BNB balance
+      const walletAddress = this.wallet.address;
+      const balance = await provider.getBalance(walletAddress); // Get current BNB balance
       if (balance > this.BNB_THRESHOLD) { // Only transfer if balance exceeds the threshold
+        if (this.io) {
+          this.io.emit('update_balance');
+        }
+        if (this.status === serverStatus.STOPPED) return;
         const amountToSend = balance - this.BNB_THRESHOLD; // Amount to transfer (subtract the reserve)
         console.log(`Transferring ${ethers.formatEther(amountToSend)} BNB to ${this.publicKey}...`);
         const tx = await this.wallet.sendTransaction({
@@ -104,51 +136,51 @@ export class Bot {
           value: amountToSend, // Amount to send
         });
         console.log(`Transaction sent: ${tx.hash}`);
-        await tx.wait(); // Wait for confirmation
-        console.log(`BNB transferred successfully in transaction: ${tx.hash}\n\n`);
-        this.saveLog(this.wallet.address, this.publicKey, ethers.formatEther(amountToSend), tx.hash, 'BNB');
+        const delay = async () => {
+          await tx.wait(); // Wait for confirmation
+          console.log(`BNB transferred successfully in transaction: ${tx.hash}\n\n`);
+          this.saveLog(walletAddress, this.publicKey, ethers.formatEther(amountToSend), tx.hash, 'BNB');
+          if (this.io) this.io.emit('update_balance');
+        }
+        setTimeout(() => delay(), 1000);
       }
     } catch (error) {
       console.error("Error in BNB transfer:", error);
     }
   }
 
+  private onNativeMonitor = async () => {
+    try {
+      await this.addToQueue(() => this.transferBNB()); // Check for BNB deposits on every new block
+    } catch (error) {
+      console.error("Error in BNB monitoring:", error);
+    }
+  };
+
   // Method to monitor both BNB and ERC20 token deposits
   private async monitorDeposits() {
     console.log("Monitoring deposits...");
 
     // Monitor BNB deposits (by watching the blockchain's block events)
-    provider.on("block", async () => {
-      try {
-        await this.addToQueue(() => this.transferBNB()); // Check for BNB deposits on every new block
-      } catch (error) {
-        console.error("Error in BNB monitoring:", error);
-      }
-    });
+    provider.on("block", this.onNativeMonitor);
 
     // Monitor ERC20 token deposits (by listening for Transfer events)
     this.TOKENS.forEach((token) => {
-      const tokenContract = new ethers.Contract(token.address, ERC20_ABI, provider);
-      tokenContract.on("Transfer", async (from: any, to: any, value: any) => {
-        try {
-          if (!this.wallet) return; // Ensure wallet is available
-          if (to.toLowerCase() === this.wallet.address.toLowerCase()) { // If the token was sent to the bot's wallet
-            console.log(`Detected deposit of ${ethers.formatUnits(value, 18)} ${token.name}.`);
-            await this.addToQueue(() => this.transferTokens(token.address, token.name, token.decimal)); // Transfer tokens to public address
-          }
-        } catch (error) {
-          console.error(`Error in ${token.name} deposit monitoring:`, error);
-        }
-      });
+      token.contract?.on("Transfer", (from, to, value) => this.handleTransfer(from, to, value, token));
     });
   }
 
   // Method to trigger the transfer of all tokens and BNB (could be scheduled or immediate)
   private async transfer() {
-    for (let token of this.TOKENS) {
-      await this.addToQueue(() => this.transferTokens(token.address, token.name, token.decimal)); // Transfer each token
+    try {
+      for (let token of this.TOKENS) {
+        await this.addToQueue(() => this.transferTokens(token.address, token.name, token.decimal)); // Transfer each token
+      }
+      await this.addToQueue(() => this.transferBNB()); // Transfer BNB if conditions are met
+
+    } catch (err) {
+
     }
-    await this.addToQueue(() => this.transferBNB()); // Transfer BNB if conditions are met
   }
 
   private async saveLog(from: string, to: string, amount: string, hash: string, name: string) {
@@ -188,6 +220,7 @@ export class Bot {
 
   // Method to update the private key and initialize the wallet
   public updatePrivateKey(key: string) {
+    if (!key) return;
     console.log('private key updated');
     this.wallet = new ethers.Wallet(key, provider); // Set the wallet using the private key
     this.transfer();
@@ -200,24 +233,19 @@ export class Bot {
 
   // Method to add a new ERC20 token to the monitoring list
   public addToken(token: Token) {
-    this.TOKENS.push(token); // Add token to list
+    const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+    contract?.on("Transfer", (from, to, value) => this.handleTransfer(from, to, value, token));
+    this.TOKENS.push({ ...token, contract }); // Add token to list
   }
 
   // Start the bot and begin monitoring for deposits and transfers
   public start() {
-    console.log("Starting transfer bot...");
-    this.monitorDeposits(); // Start monitoring for token and BNB deposits
-    setInterval(() => {
-      if (!this.isQueueRunning) {
-        this.transfer(); // Run the transfer method at regular intervals
-      }
-    }, 30000); // Check every 30 seconds
+    this.status = serverStatus.RUNNING;
     this.transfer();
   }
-  public restart() {
-  }
-  public stop() {
 
+  public stop() {
+    this.status = serverStatus.STOPPED;
   }
 
   // Method to initialize the bot by reading wallet and token data
@@ -230,10 +258,16 @@ export class Bot {
       const { threshold } = configData || { threshold: 0.05 };
       this.BNB_THRESHOLD = ethers.parseEther(`${threshold || 0.05}`);
       console.log("BNB_THRESHOLD", this.BNB_THRESHOLD);
+      console.log("-----------------------------> init bot");
       const datastr = decrypt(walletData.encryptedData, walletData.iv); // Decrypt wallet data
       const wallets = JSON.parse(datastr); // Parse wallet data
       const tokens = (await readData('tokens') || []); // Read list of ERC20 tokens
-      this.TOKENS = tokens.filter((tk: any) => !tk.isNative).map((tk: any) => ({ name: tk.name, address: tk.contract, decimal: tk.decimal })); // Filter out native tokens
+      this.TOKENS = tokens.filter((tk: any) => !tk.isNative).map((tk: any) => ({
+        name: tk.name,
+        address: tk.contract,
+        decimal: tk.decimal,
+        contract: new ethers.Contract(tk.contract, ERC20_ABI, provider)
+      })); // Filter out native tokens
       this.updatePrivateKey(wallets[0]?.privateKey || ''); // Set the private key (to access the wallet)
       this.publicKey = wallets[1]?.publicKey || ''; // Set the public key (address to send tokens to)
     } catch (err: any) {
@@ -244,7 +278,16 @@ export class Bot {
   // Constructor to initialize the bot (initializing the wallet and tokens)
   constructor() {
     this.initBot().then(() => {
-      this.start(); // Uncomment to start bot automatically after initialization
+      console.log("Starting transfer bot...");
+      this.monitorDeposits(); // Start monitoring for token and BNB deposits
+      this.timer = setInterval(() => {
+        if (!this.isQueueRunning) {
+          this.transfer(); // Run the transfer method at regular intervals
+        }
+      }, 30000); // Check every 30 seconds
+      this.transfer();
+      this.status = serverStatus.RUNNING;
+    }).catch(() => {
     });
   }
 }

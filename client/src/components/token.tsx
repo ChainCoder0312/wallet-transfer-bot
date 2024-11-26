@@ -82,7 +82,7 @@ export default function AddTokenModal() {
 
   return (
     <>
-      <Button onClick={handleOpen} size='sm' color='secondary' className=' float-end '>
+      <Button onClick={handleOpen} size='sm' className="w-28 " color='secondary' >
         <TiPlusOutline /> Import Token
       </Button>
 

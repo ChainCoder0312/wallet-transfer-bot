@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import RenderDate from '../utils';
 import moment from 'moment';
 import { useSocket } from '../utils/use-socket';
-import { getService, postService } from '../utils/request';
+import { postService } from '../utils/request';
 import RenderLongString from './RenderLongString';
+import { explorerUrl } from '../contexts/RpcContext';
 
 interface Log {
   name: string;
@@ -18,44 +19,36 @@ interface Log {
 
 const Logs = () => {
 
+  const [data, setData] = useState<Log[]>([]);
   const { socket } = useSocket();
+  const [page, setPage] = React.useState(1);
+  const rowsPerPage = 10;
 
+  const [pages, setPages] = useState(1);
   const handleTransaction = (res: Log) => {
-    data.unshift(res);
     data.pop();
-    setData([...data]);
+    setData([res, ...data]);
   };
 
   useEffect(() => {
-
     if (socket) {
       socket.on('new_transaction', handleTransaction);
       return () => {
         socket.off('new_transaction');
       };
     }
-  }, [socket]);
-
-  const [data, setData] = useState<Log[]>([]);
-
-
-
-  const [page, setPage] = React.useState(1);
-  const rowsPerPage = 10;
-
-  const [pages, setPages] = useState(1);
+  }, [socket, data]);
 
   useEffect(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage - 1;
     console.log({ start, end });
 
-    postService('/logs', { start, end }).then(({ data }) => {
-      console.log(data);
-      setData(data.data);
-      setPages(Math.ceil(data.total / rowsPerPage));
+    postService('/logs', { start, end }).then(({ data: _data }) => {
+      console.log(_data);
+      setData(_data.data);
+      setPages(Math.ceil(_data.total / rowsPerPage));
     });
-
 
   }, [page]);
 
@@ -98,7 +91,7 @@ const Logs = () => {
               {(columnKey) => <TableCell> {columnKey === 'time' ?
                 <Tooltip showArrow={true} color='secondary' content={RenderDate(getKeyValue(item, columnKey))}>
                   {moment(getKeyValue(item, columnKey)).fromNow()}
-                </Tooltip> : <RenderLongString link={columnKey === 'hash' ? 'https://bscscan.com/tx/' : ''}  >
+                </Tooltip> : <RenderLongString link={columnKey === 'hash' ? explorerUrl : ''}  >
                   {getKeyValue(item, columnKey)}
                 </RenderLongString>
               }</TableCell>}

@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../utils/config';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -18,7 +19,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const SERVER_URL = `http://${window.location.hostname}:5000`;
+    const SERVER_URL = SOCKET_URL;
     const newSocket = io(SERVER_URL);
 
     newSocket.on('connect', () => {

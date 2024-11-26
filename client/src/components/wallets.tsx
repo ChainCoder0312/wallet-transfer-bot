@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { useEther } from "../utils/use-ether";
 import { isValidAddress } from "../utils";
 import { ethers } from "ethers";
+import { useSocket } from "../utils/use-socket";
 
 
 interface Wallet {
@@ -20,6 +21,7 @@ interface Wallet {
 
 const Wallets = () => {
   const { getContractInfo, provider } = useEther();
+  const { socket } = useSocket();
   const { tokens } = useStore();
 
 
@@ -36,15 +38,6 @@ const Wallets = () => {
   const [current, setCurrent] = useState(1);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    getService('/wallet/fetch').then((res: any) => {
-      setWallet1({ ...wallet1, publicKey: res.data[0]?.publicKey || '' });
-      setWallet2({ ...wallet2, publicKey: res.data[1]?.publicKey || '' });
-    }).catch(err => console.log(err));
-  }, []);
-
-
-
   const [passModal, setPassModal] = useState(false);
   const [password, setPassword] = useState('');
   const [isChecked, setIsChecked] = useState(false);
@@ -54,23 +47,55 @@ const Wallets = () => {
 
   const getBalance = async (num: 0 | 1) => {
     const wallet = num ? wallet2 : wallet1;
+    let balance: string;
     const token = tokens.filter(tk => tk.symbol === selectedTokens[num])[0];
     if (token?.isNative) {
       if (!isValidAddress(wallet.publicKey)) return;
-      balances[num] = ethers.formatEther(await provider?.getBalance(wallet.publicKey) || 0);
-      setBalances([...balances]);
+      balance = ethers.formatEther(await provider?.getBalance(wallet.publicKey) || 0);
+      // setBalances((prev) => {
+      //   prev[num] = balance;
+      //   return [...prev];
+      // });
     } else {
-
       const res = await getContractInfo(token?.contract, wallet.publicKey, token?.decimal || 18);
-      balances[num] = res?.balance || '0';
-      setBalances([...balances]);
+      balance = res?.balance || '0';
+      // setBalances((prev) => {
+      //   prev[num] = balance;
+      //   return [...prev];
+      // });
     }
+    return balance;
+  };
+
+  const updateBlance = async () => {
+    console.log('===========>updatebalance');
+    const balance1: string = (await getBalance(0)) || '';
+    const balance2: string = (await getBalance(1)) || "";
+    console.log(balance1, balance2);
+    setBalances([balance1, balance2]);
   };
 
   useEffect(() => {
-    getBalance(0);
-    getBalance(1);
+    updateBlance();
   }, [selectedTokens, wallet1.publicKey, wallet2.publicKey]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('update_balance', () => {
+        updateBlance();
+      });
+      return () => {
+        socket.off('update_balance');
+      };
+    }
+  }, [socket, tokens, wallet1.publicKey, wallet2.publicKey, balances]);
+
+  useEffect(() => {
+    getService('/wallet/fetch').then((res: any) => {
+      setWallet1({ ...wallet1, publicKey: res.data[0]?.publicKey || '' });
+      setWallet2({ ...wallet2, publicKey: res.data[1]?.publicKey || '' });
+    }).catch(err => console.log(err));
+  }, []);
 
 
   const init = () => {

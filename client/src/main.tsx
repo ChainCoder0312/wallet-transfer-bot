@@ -12,7 +12,6 @@ createRoot(document.getElementById('root')!).render(
     <StoreProvider>
       <RpcProvider>
         <SocketProvider>
-
           <App />
         </SocketProvider>
       </RpcProvider>

@@ -14,9 +14,7 @@ const bot = new Bot();
 app.use(express.json());
 app.use(compression());
 app.use(express.static(`${config.DIR}/public`));
-
-
-
+console.log(config.DIR);
 app.use(
   cors({
     origin: "*", // Allow only your frontend URL
@@ -32,8 +30,6 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 const io = require("socket.io")(server, { cors: { origin: "*" } });
-
-
 io.on('connection', (socket: Server) => {
   bot.onServer(socket);
   console.log('Socket connected');
@@ -41,6 +37,15 @@ io.on('connection', (socket: Server) => {
     bot.onServer(null);
     console.log('Socket disconnected');
   });
+  socket.on("start", () => {
+    bot.start();
+  });
+  socket.on("stop", () => {
+    bot.stop();
+  });
+  setInterval(() => {
+    io.emit("status", bot.status);
+  }, 500);
 });
 
 

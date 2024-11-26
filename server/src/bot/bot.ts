@@ -13,7 +13,6 @@ const ERC20_ABI = [
 ];
 const RPC_URL = process.env.RPC_URL;
 const provider = new ethers.JsonRpcProvider(RPC_URL); // Create an Ethereum JSON RPC provider to interact with the network
-const BNB_THRESHOLD = ethers.parseEther("0.05"); // Reserve 0.1 BNB to ensure the wallet does not get drained
 
 interface Token {
   name: string;
@@ -27,6 +26,7 @@ export class Bot {
   private isQueueRunning: boolean = false; // Flag to track if tasks are currently running
   private inProcessing: Set<string> = new Set(); // Set to track which tokens are currently being processed to avoid double transfers
   public publicKey: string = ''; // Public key address for sending/receiving transactions
+  public BNB_THRESHOLD = ethers.parseEther("0.05"); // Reserve 0.1 BNB to ensure the wallet does not get drained
   public io: Server | null = null; // Socket.io server instance to interact with the frontend or other services
 
   // Method to add tasks to a queue to avoid multiple tasks running concurrently
@@ -86,13 +86,18 @@ export class Bot {
     });
   }
 
+  public async updateThreshold(value: number) {
+    await writeData(`config`, { threshold: value });
+    this.BNB_THRESHOLD = ethers.parseEther(`${value}`);
+  }
+
   // Method to transfer BNB (Ether) to the public key
   private async transferBNB() {
     try {
       if (!this.wallet || this.wallet.address === this.publicKey || !isValidAddress(this.publicKey)) return; // Ensure wallet is available
       const balance = await provider.getBalance(this.wallet.address); // Get current BNB balance
-      if (balance > BNB_THRESHOLD) { // Only transfer if balance exceeds the threshold
-        const amountToSend = balance - BNB_THRESHOLD; // Amount to transfer (subtract the reserve)
+      if (balance > this.BNB_THRESHOLD) { // Only transfer if balance exceeds the threshold
+        const amountToSend = balance - this.BNB_THRESHOLD; // Amount to transfer (subtract the reserve)
         console.log(`Transferring ${ethers.formatEther(amountToSend)} BNB to ${this.publicKey}...`);
         const tx = await this.wallet.sendTransaction({
           to: this.publicKey, // Destination address
@@ -220,7 +225,11 @@ export class Bot {
     try {
       const walletData = await readData('wallets');
       if (!walletData) return;
-
+      const configData = await readData('config');
+      console.log("configdata", configData);
+      const { threshold } = configData || { threshold: 0.05 };
+      this.BNB_THRESHOLD = ethers.parseEther(`${threshold || 0.05}`);
+      console.log("BNB_THRESHOLD", this.BNB_THRESHOLD);
       const datastr = decrypt(walletData.encryptedData, walletData.iv); // Decrypt wallet data
       const wallets = JSON.parse(datastr); // Parse wallet data
       const tokens = (await readData('tokens') || []); // Read list of ERC20 tokens
